@@ -1,0 +1,158 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Outfit:wght@100..900&display=swap');
+
+:root {
+  --primary: #D4AF37; /* Metallic Gold */
+  --primary-light: #F3E5AB;
+  --bg: #FDFCF8; /* Cream/Off-white */
+  --accent: #F4E1E1; /* Soft Blush */
+  --text-dark: #1A1A1A;
+  --text-light: #5A5A5A;
+  --glass: rgba(255, 255, 255, 0.4);
+  --border: rgba(212, 175, 55, 0.3);
+  --shadow: 0 15px 35px rgba(0, 0, 0, 0.05);
+  --transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background-color: var(--bg);
+  color: var(--text-dark);
+  overflow-x: hidden;
+  line-height: 1.6;
+  cursor: none; /* For custom cursor */
+}
+
+a, button {
+  cursor: none; 
+}
+
+h1, h2, h3, .serif {
+  font-family: 'Playfair Display', serif;
+}
+
+.arabic {
+  font-family: 'Cairo', sans-serif;
+  direction: rtl;
+}
+
+.container {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+
+/* Advanced Glassmorphism */
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 8px 32px 0 rgba(135, 126, 106, 0.15);
+}
+
+/* Gold Text Shimmer Effect */
+.gold-text-gradient {
+  background: linear-gradient(
+    to right, 
+    #BF953F, 
+    #FCF6BA, 
+    #B38728, 
+    #FBF5B7, 
+    #AA771C
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  background-size: 200% auto;
+  animation: shine 4s linear infinite;
+}
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+.arabesque-overlay {
+  background-image: url('https://www.transparenttextures.com/patterns/arabesque.png');
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+section {
+  padding: 120px 0;
+  position: relative;
+}
+
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+  color: var(--text-dark);
+  border: 1px solid var(--primary);
+  padding: 18px 45px;
+  border-radius: 50px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  letter-spacing: 2px;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  z-index: -1;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: scaleX(0);
+  transform-origin: right;
+}
+
+.btn-primary:hover::before {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.btn-primary:hover {
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+}
+
+/* Custom Image Reveal */
+.reveal-image-container {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  transition: clip-path 1.2s cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+.image-frame img {
+  transform: scale(1.1);
+  transition: transform 1.2s cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+.image-frame.in-view img {
+  transform: scale(1);
+}
+
+/* Hide scrollbar for cleaner look */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 10px;
+}
