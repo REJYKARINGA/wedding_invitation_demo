@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, useScroll, useSpring, useTransform, AnimatePresence } from 'framer-motion';
 import { Calendar, MapPin, Clock, Heart, Music, Menu, X } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -129,7 +129,201 @@ const CustomCursor = () => {
   );
 };
 
+/* Countdown Timer */
+const CountdownTimer = ({ targetDate }) => {
+  const calcTime = useCallback(() => {
+    const diff = new Date(targetDate) - new Date();
+    if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+    return {
+      days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+      hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+      minutes: Math.floor((diff / (1000 * 60)) % 60),
+      seconds: Math.floor((diff / 1000) % 60),
+    };
+  }, [targetDate]);
+
+  const [time, setTime] = useState(calcTime);
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(calcTime()), 1000);
+    return () => clearInterval(timer);
+  }, [calcTime]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 2.1, duration: 0.8 }}
+      style={{ display: 'flex', justifyContent: 'center', gap: 'clamp(12px, 3vw, 25px)', marginBottom: '25px' }}
+    >
+      {[
+        { label: 'Days', value: time.days },
+        { label: 'Hours', value: time.hours },
+        { label: 'Minutes', value: time.minutes },
+        { label: 'Seconds', value: time.seconds },
+      ].map((item) => (
+        <div key={item.label} style={{ textAlign: 'center', minWidth: '60px' }}>
+          <div style={{ fontSize: 'clamp(1.6rem, 4vw, 2.4rem)', fontWeight: 700, color: 'var(--primary)', lineHeight: 1 }}>
+            {String(item.value).padStart(2, '0')}
+          </div>
+          <div style={{ fontSize: 'clamp(0.55rem, 1.2vw, 0.7rem)', textTransform: 'uppercase', letterSpacing: '2px', color: 'var(--text-light)', marginTop: '5px' }}>
+            {item.label}
+          </div>
+        </div>
+      ))}
+    </motion.div>
+  );
+};
+
+/* Scroll to Top */
+const ScrollToTop = () => {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const toggle = () => setVisible(window.scrollY > 400);
+    window.addEventListener('scroll', toggle);
+    return () => window.removeEventListener('scroll', toggle);
+  }, []);
+
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.5 }}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          style={{
+            position: 'fixed', bottom: '30px', right: '30px', zIndex: 999,
+            width: '50px', height: '50px', borderRadius: '50%',
+            background: 'var(--primary)', border: 'none', cursor: 'pointer',
+            boxShadow: '0 4px 15px rgba(212,175,55,0.4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'white', fontSize: '1.3rem',
+          }}
+        >
+          ↑
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+};
+
+/* Auto Scroll */
+const AutoScroll = ({ delay = 3500 }) => {
+  const [active, setActive] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const rafRef = useRef(null);
+  const speedRef = useRef(0.5);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setActive(true);
+      setIsPlaying(true);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      return;
+    }
+    const scroll = () => {
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      const current = window.scrollY;
+      if (current >= maxScroll) {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+      window.scrollBy(0, speedRef.current);
+      rafRef.current = requestAnimationFrame(scroll);
+    };
+    rafRef.current = requestAnimationFrame(scroll);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [isPlaying]);
+
+  useEffect(() => {
+    const handleClick = () => {
+      if (!active) return;
+      setIsPlaying(p => !p);
+    };
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, [active]);
+
+  return null;
+};
+
+/* Splash Loader */
+const SplashLoader = ({ onFinish }) => {
+  useEffect(() => {
+    const timer = setTimeout(onFinish, 3500);
+    return () => clearTimeout(timer);
+  }, [onFinish]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.8, ease: 'easeInOut' }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 99999,
+        background: 'var(--bg)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.8, ease: 'easeOut' }}
+        style={{ textAlign: 'center' }}
+      >
+        <motion.p
+          animate={{ opacity: [0.3, 1, 0.3] }}
+          transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+          className="serif gold-text-gradient"
+          style={{ fontSize: 'clamp(3rem, 8vw, 6rem)', marginBottom: '10px' }}
+        >
+          ✦
+        </motion.p>
+        <h1 className="serif gold-text-gradient" style={{ fontSize: 'clamp(2.5rem, 7vw, 5rem)', marginBottom: '10px', letterSpacing: '3px' }}>
+          Omar & Layla
+        </h1>
+        <motion.div
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ delay: 0.5, duration: 1.5, ease: 'circOut' }}
+          style={{ height: '1px', width: 'clamp(80px, 15vw, 200px)', background: 'var(--primary)', margin: '15px auto', transformOrigin: 'center' }}
+        />
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8, duration: 0.8 }}
+          style={{ color: 'var(--text-light)', fontSize: 'clamp(0.8rem, 2vw, 1rem)', letterSpacing: '4px', textTransform: 'uppercase' }}
+        >
+          Wedding Invitation
+        </motion.p>
+      </motion.div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2, duration: 0.5 }}
+        style={{ position: 'absolute', bottom: '40px' }}
+      >
+        <motion.div
+          animate={{ y: [0, 8, 0], opacity: [0.3, 0.8, 0.3] }}
+          transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+          style={{ width: '1px', height: '40px', background: 'linear-gradient(to bottom, var(--primary), transparent)' }}
+        />
+      </motion.div>
+    </motion.div>
+  );
+};
+
 const App = () => {
+  const [showSplash, setShowSplash] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -166,7 +360,12 @@ const App = () => {
 
   return (
     <div className="app">
+      <AnimatePresence>
+        {showSplash && <SplashLoader onFinish={() => setShowSplash(false)} />}
+      </AnimatePresence>
       <CustomCursor />
+      <ScrollToTop />
+      <AutoScroll delay={10000} />
       
       {/* Personalize Modal */}
       <AnimatePresence>
@@ -334,11 +533,13 @@ const App = () => {
             
             <motion.p 
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2, duration: 0.8 }}
-              className="serif" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.8rem)', marginBottom: '30px', color: 'var(--text-dark)', letterSpacing: '2px' }}>
-              20 • JUNE • 2026
+              className="serif" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.8rem)', marginBottom: '10px', color: 'var(--text-dark)', letterSpacing: '2px' }}>
+              22 • AUGUST • 2026
             </motion.p>
             
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2.3, duration: 0.8 }}>
+            <CountdownTimer targetDate="August 22, 2026 16:00:00" />
+            
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2.6, duration: 0.8 }}>
               <MagneticButton href="#events" className="btn-primary" style={{ padding: '12px 30px' }}>
                 EXPLORE ITINERARY
               </MagneticButton>
@@ -411,9 +612,9 @@ const App = () => {
           
           <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
             {[
-              { title: 'Nikah Ceremony', time: '4:00 PM', date: 'June 20, 2026', icon: <Heart size={28} strokeWidth={1.5}/>, desc: 'The binding contract ceremony in the presence of close family and friends.' },
-              { title: 'Grand Reception', time: '8:00 PM', date: 'June 20, 2026', icon: <Music size={28} strokeWidth={1.5}/>, desc: 'A spectacular night of celebration, traditional dinner, and joy.' },
-              { title: 'Farewell Brunch', time: '10:00 AM', date: 'June 21, 2026', icon: <Calendar size={28} strokeWidth={1.5}/>, desc: 'Join us for a morning prayer and brunch as we start our first day.' }
+              { title: 'Nikah Ceremony', time: '4:00 PM', date: 'August 22, 2026', icon: <Heart size={28} strokeWidth={1.5}/>, desc: 'The binding contract ceremony in the presence of close family and friends.' },
+              { title: 'Grand Reception', time: '8:00 PM', date: 'August 22, 2026', icon: <Music size={28} strokeWidth={1.5}/>, desc: 'A spectacular night of celebration, traditional dinner, and joy.' },
+              { title: 'Farewell Brunch', time: '10:00 AM', date: 'August 23, 2026', icon: <Calendar size={28} strokeWidth={1.5}/>, desc: 'Join us for a morning prayer and brunch as we start our first day.' }
             ].map((event, i) => (
               <motion.div 
                 key={i}
