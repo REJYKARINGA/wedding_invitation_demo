@@ -418,7 +418,7 @@ const App = () => {
       />
 
       {/* Navigation */}
-      <nav className="glass nav-glass" style={{ position: 'fixed', width: '90%', top: 20, zIndex: 100, left: '50%', transform: 'translateX(-50%)', maxWidth: '1200px', borderRadius: '40px', border: '1px solid rgba(255,255,255,0.2)' }}>
+      <nav className="glass nav-glass" style={{ position: 'fixed', width: '90%', top: 20, zIndex: 100, left: '50%', transform: 'translateX(-50%)', maxWidth: '1200px', borderRadius: '40px', border: '1px solid rgba(255,255,255,0.4)', background: 'rgba(255, 255, 255, 0.55)', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' }}>
         <div className="container" style={{ height: '70px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', maxWidth: '100%' }}>
           <div className="serif gold-text-gradient" style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>
             O & L
