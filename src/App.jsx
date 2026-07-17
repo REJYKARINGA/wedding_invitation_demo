@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, useScroll, useSpring, useTransform, AnimatePresence } from 'framer-motion';
 import { Calendar, MapPin, Clock, Heart, Music, Menu, X } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -7,6 +7,9 @@ import L from 'leaflet';
 
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import flower1 from './assets/flower1.png';
+import flower2 from './assets/flower2.png';
+import flower3 from './assets/flower3.png';
 let DefaultIcon = L.icon({
     iconUrl: markerIcon,
     shadowUrl: markerShadow,
@@ -263,6 +266,43 @@ const SplashLoader = ({ onFinish }) => {
     return () => clearTimeout(timer);
   }, [onFinish]);
 
+  const flowers = useMemo(() => {
+    const w = typeof window !== 'undefined' ? window.innerWidth : 1200;
+    const h = typeof window !== 'undefined' ? window.innerHeight : 800;
+    return Array.from({ length: 12 }, (_, i) => {
+      const depth = Math.random();
+      const numPoints = 20;
+      const swayAmp = (30 + depth * 90) * (0.5 + depth * 0.5);
+      const phase = Math.random() * Math.PI * 2;
+      const drift = (Math.random() - 0.5) * 120;
+      const startY = -(60 + Math.random() * (h * 0.5));
+      return {
+        id: i,
+        src: [flower1, flower2, flower3][i % 3],
+        left: Math.random() * w,
+        startY,
+        size: 12 + depth * 40,
+        dur: 8 + depth * 12,
+        delay: Math.random() * 5,
+        yKf: Array.from({ length: numPoints }, (_, j) => {
+          const t = j / (numPoints - 1);
+          return startY + Math.pow(t, 1.1) * (h + 250);
+        }),
+        xKf: Array.from({ length: numPoints }, (_, j) => {
+          const t = j / (numPoints - 1);
+          return Math.sin(t * Math.PI * 3 + phase) * swayAmp
+            + Math.sin(t * Math.PI * 1.2 + phase * 1.7) * swayAmp * 0.4
+            + drift * t;
+        }),
+        rotateDur: 3 + depth * 5,
+        startRot: Math.random() * 360,
+        opacity: 0.2 + depth * 0.55,
+        blur: depth > 0.7 ? 0 : 0.5 + depth * 0.8,
+        scalePulse: 0.85 + Math.random() * 0.3,
+      };
+    });
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 1 }}
@@ -272,13 +312,43 @@ const SplashLoader = ({ onFinish }) => {
         position: 'fixed', inset: 0, zIndex: 99999,
         background: 'var(--bg)',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
       }}
     >
+      {flowers.map((f) => (
+        <motion.img
+          key={f.id}
+          src={f.src}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: f.left,
+            width: f.size,
+            height: f.size,
+            zIndex: 1,
+            opacity: f.opacity,
+            pointerEvents: 'none',
+            filter: f.blur ? `blur(${f.blur}px)` : undefined,
+          }}
+          animate={{
+            y: f.yKf,
+            x: f.xKf,
+            rotate: [f.startRot, f.startRot + 360],
+            scale: [1, f.scalePulse, 1, 1.05, 1],
+          }}
+          transition={{
+            y: { duration: f.dur, delay: f.delay, repeat: Infinity, ease: 'easeInOut' },
+            x: { duration: f.dur, delay: f.delay, repeat: Infinity, ease: 'easeInOut' },
+            rotate: { duration: f.rotateDur, delay: f.delay, repeat: Infinity, ease: 'linear' },
+            scale: { duration: f.dur * 0.6, delay: f.delay, repeat: Infinity, ease: 'easeInOut' },
+          }}
+        />
+      ))}
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.8, ease: 'easeOut' }}
-        style={{ textAlign: 'center' }}
+        style={{ textAlign: 'center', zIndex: 2 }}
       >
         <motion.p
           animate={{ opacity: [0.3, 1, 0.3] }}
@@ -310,7 +380,7 @@ const SplashLoader = ({ onFinish }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 2, duration: 0.5 }}
-        style={{ position: 'absolute', bottom: '40px' }}
+        style={{ position: 'absolute', bottom: '40px', zIndex: 2 }}
       >
         <motion.div
           animate={{ y: [0, 8, 0], opacity: [0.3, 0.8, 0.3] }}
@@ -319,6 +389,65 @@ const SplashLoader = ({ onFinish }) => {
         />
       </motion.div>
     </motion.div>
+  );
+};
+
+/* Floating Flowers for main page */
+const FloatingFlowers = ({ count = 5 }) => {
+  const flowers = useMemo(() => {
+    const w = typeof window !== 'undefined' ? window.innerWidth : 1200;
+    const h = typeof window !== 'undefined' ? window.innerHeight : 800;
+    return Array.from({ length: count }, (_, i) => {
+      const startY = -(80 + Math.random() * (h * 0.6));
+      return {
+        id: i,
+        src: [flower1, flower2, flower3][i % 3],
+        left: Math.random() * w,
+        startY,
+        size: 26 + Math.random() * 30,
+        dur: 18 + Math.random() * 14,
+        sway: 25 + Math.random() * 50,
+        phase: Math.random() * Math.PI * 2,
+        drift: (Math.random() - 0.5) * 80,
+        startRot: Math.random() * 360,
+        rotateDur: 5 + Math.random() * 5,
+        opacity: 0.5 + Math.random() * 0.4,
+      };
+    });
+  }, [count]);
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 99998, overflow: 'hidden' }}>
+      {flowers.map((f) => (
+        <motion.img
+          key={f.id}
+          src={f.src}
+          style={{
+            position: 'absolute',
+            top: f.startY,
+            left: f.left,
+            width: f.size,
+            height: f.size,
+            opacity: f.opacity,
+          }}
+          animate={{
+            y: [0, window.innerHeight + 150],
+            x: Array.from({ length: 12 }, (_, j) =>
+              Math.sin((j / 11) * Math.PI * 3 + f.phase) * f.sway
+              + Math.sin((j / 11) * Math.PI * 1.5 + f.phase * 1.7) * f.sway * 0.35
+              + f.drift * (j / 11)
+            ),
+            rotate: [f.startRot, f.startRot + 360],
+          }}
+          transition={{
+            duration: f.dur,
+            repeat: Infinity,
+            ease: 'easeInOut',
+            rotate: { duration: f.rotateDur, repeat: Infinity, ease: 'linear' },
+          }}
+        />
+      ))}
+    </div>
   );
 };
 
@@ -363,6 +492,7 @@ const App = () => {
       <AnimatePresence>
         {showSplash && <SplashLoader onFinish={() => setShowSplash(false)} />}
       </AnimatePresence>
+      {!showSplash && <FloatingFlowers count={4} />}
       <CustomCursor />
       <ScrollToTop />
       <AutoScroll delay={10000} />
