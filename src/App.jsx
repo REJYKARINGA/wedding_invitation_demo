@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { motion, useScroll, useSpring, useTransform, AnimatePresence } from 'framer-motion';
+import { motion, useScroll, useSpring, useTransform, useMotionValue, animate, AnimatePresence } from 'framer-motion';
 import { Calendar, MapPin, Clock, Heart, Music, Menu, X } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -212,20 +212,11 @@ const ScrollToTop = () => {
   );
 };
 
-/* Auto Scroll */
-const AutoScroll = ({ delay = 3500 }) => {
-  const [active, setActive] = useState(false);
+/* Auto Scroll (paused by default — click to toggle) */
+const AutoScroll = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const rafRef = useRef(null);
   const speedRef = useRef(0.5);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setActive(true);
-      setIsPlaying(true);
-    }, delay);
-    return () => clearTimeout(timer);
-  }, [delay]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -248,13 +239,10 @@ const AutoScroll = ({ delay = 3500 }) => {
   }, [isPlaying]);
 
   useEffect(() => {
-    const handleClick = () => {
-      if (!active) return;
-      setIsPlaying(p => !p);
-    };
+    const handleClick = () => setIsPlaying(p => !p);
     window.addEventListener('click', handleClick);
     return () => window.removeEventListener('click', handleClick);
-  }, [active]);
+  }, []);
 
   return null;
 };
@@ -392,20 +380,107 @@ const SplashLoader = ({ onFinish }) => {
   );
 };
 
+/* Single falling flower with hold-at-bottom + scroll-up + fall-back */
+const FallingFlower = ({ f, scrollY }) => {
+  const y = useMotionValue(0);
+  const state = useRef('falling');
+  const scrollAtHold = useRef(0);
+  const bottomY = useMemo(() => window.innerHeight - f.startY - f.size, []);
+  const timerRef = useRef(null);
+  const animRef = useRef(null);
+
+  useEffect(() => {
+    state.current = 'falling';
+    animRef.current = animate(y, bottomY, {
+      duration: f.dur,
+      ease: 'linear',
+      onComplete: () => { state.current = 'holding'; },
+    });
+    return () => animRef.current?.stop();
+  }, []);
+
+  useEffect(() => {
+    const onScroll = (latest) => {
+      clearTimeout(timerRef.current);
+
+      if (state.current === 'holding' || state.current === 'falling') {
+        if (animRef.current) animRef.current.stop();
+        state.current = 'rising';
+        scrollAtHold.current = latest;
+      }
+
+      if (state.current === 'rising') {
+        const newY = Math.max(0, bottomY - (latest - scrollAtHold.current) * 0.25);
+        y.set(newY);
+
+        timerRef.current = setTimeout(() => {
+          if (state.current === 'rising') {
+            const currentY = y.get();
+            const remaining = 1 - currentY / bottomY;
+            if (remaining < 0.05) {
+              state.current = 'holding';
+            } else {
+              state.current = 'falling';
+              animRef.current = animate(y, bottomY, {
+                duration: f.dur * Math.max(0.2, remaining),
+                ease: 'linear',
+                onComplete: () => { state.current = 'holding'; },
+              });
+            }
+          }
+        }, 250);
+      }
+    };
+
+    const unsubscribe = scrollY.on('change', onScroll);
+    return () => {
+      clearTimeout(timerRef.current);
+      unsubscribe();
+    };
+  }, [scrollY]);
+
+  return (
+    <motion.img
+      src={f.src}
+      style={{
+        position: 'absolute',
+        top: f.startY,
+        left: f.left,
+        width: f.size,
+        height: f.size,
+        opacity: f.opacity,
+        y,
+      }}
+      animate={{
+        x: Array.from({ length: 12 }, (_, j) =>
+          Math.sin((j / 11) * Math.PI * 3 + f.phase) * f.sway
+          + Math.sin((j / 11) * Math.PI * 1.5 + f.phase * 1.7) * f.sway * 0.35
+          + f.drift * (j / 11)
+        ),
+        rotate: [f.startRot, f.startRot + 360],
+      }}
+      transition={{
+        x: { duration: f.dur, repeat: Infinity, ease: 'easeInOut' },
+        rotate: { duration: f.rotateDur, repeat: Infinity, ease: 'linear' },
+      }}
+    />
+  );
+};
+
 /* Floating Flowers for main page */
 const FloatingFlowers = ({ count = 5 }) => {
+  const { scrollY } = useScroll();
   const flowers = useMemo(() => {
     const w = typeof window !== 'undefined' ? window.innerWidth : 1200;
-    const h = typeof window !== 'undefined' ? window.innerHeight : 800;
     return Array.from({ length: count }, (_, i) => {
-      const startY = -(80 + Math.random() * (h * 0.6));
+      const startY = -(80 + Math.random() * Math.min(window.innerHeight * 0.25, 120));
       return {
         id: i,
         src: [flower1, flower2, flower3][i % 3],
         left: Math.random() * w,
         startY,
         size: 26 + Math.random() * 30,
-        dur: 18 + Math.random() * 14,
+        dur: 18 + Math.random() * 10,
         sway: 25 + Math.random() * 50,
         phase: Math.random() * Math.PI * 2,
         drift: (Math.random() - 0.5) * 80,
@@ -417,35 +492,9 @@ const FloatingFlowers = ({ count = 5 }) => {
   }, [count]);
 
   return (
-    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 99998, overflow: 'hidden' }}>
+    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 99998 }}>
       {flowers.map((f) => (
-        <motion.img
-          key={f.id}
-          src={f.src}
-          style={{
-            position: 'absolute',
-            top: f.startY,
-            left: f.left,
-            width: f.size,
-            height: f.size,
-            opacity: f.opacity,
-          }}
-          animate={{
-            y: [0, window.innerHeight + 150],
-            x: Array.from({ length: 12 }, (_, j) =>
-              Math.sin((j / 11) * Math.PI * 3 + f.phase) * f.sway
-              + Math.sin((j / 11) * Math.PI * 1.5 + f.phase * 1.7) * f.sway * 0.35
-              + f.drift * (j / 11)
-            ),
-            rotate: [f.startRot, f.startRot + 360],
-          }}
-          transition={{
-            duration: f.dur,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            rotate: { duration: f.rotateDur, repeat: Infinity, ease: 'linear' },
-          }}
-        />
+        <FallingFlower key={f.id} f={f} scrollY={scrollY} />
       ))}
     </div>
   );
@@ -488,14 +537,14 @@ const App = () => {
   const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
 
   return (
-    <div className="app">
+    <div className="app" style={{ position: 'relative' }}>
       <AnimatePresence>
         {showSplash && <SplashLoader onFinish={() => setShowSplash(false)} />}
       </AnimatePresence>
       {!showSplash && <FloatingFlowers count={4} />}
       <CustomCursor />
       <ScrollToTop />
-      <AutoScroll delay={10000} />
+      <AutoScroll />
       
       {/* Personalize Modal */}
       <AnimatePresence>
